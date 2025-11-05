@@ -1,0 +1,14 @@
+{
+    "modality": "image",
+    "img_shape": [1, 128, 128],
+    "latent_dim": 100,
+    "base_channels": 64,
+    "depth": 3,
+    "norm_type": "batch",
+    "activation_g": "relu",
+    "activation_d": "leakyrelu",
+    "output_activation": "tanh",
+    "loss_type": "hinge",
+    "epochs": 10,
+    "batch_size": 64
+}
