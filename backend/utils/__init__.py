@@ -9,3 +9,4 @@ from .universal_gan import (
     TabularGenerator,
     TabularDiscriminator,
 )
+from .train_gan import create_gan_training_script, create_slurm_script, save_training_script, save_slurm_script

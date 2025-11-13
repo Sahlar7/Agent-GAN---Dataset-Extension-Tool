@@ -78,12 +78,15 @@ CONFIGURATION SPECIFICATION (gan_training_config: dict/JSON)
 - final_activation:    "sigmoid" | "none"
 
 ======================================================================
-DATA LOADER CONTRACT
+DATASET CONTRACT
 ======================================================================
 You must emit Python source code (string) that defines:
-    def create_dataloader(file_path, batch_size=64):
+    def create_dataset(file_path):
         ...
-        return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        return torch.utils.data.Dataset  # NOT DataLoader!
+
+The UniversalGAN.train() method will create its own DataLoader with the batch_size
+from the config. Your function should only return the dataset.
 
 For image zips with class subfolders, use torchvision.datasets.ImageFolder with transforms:
 - Resize to config["img_shape"][1:3]
@@ -93,9 +96,8 @@ For image zips with class subfolders, use torchvision.datasets.ImageFolder with 
 Example (image zip):
     import zipfile, tempfile, os
     from torchvision import datasets, transforms
-    from torch.utils.data import DataLoader
 
-    def create_dataloader(file_path, batch_size=64):
+    def create_dataset(file_path):
         temp_dir = tempfile.mkdtemp()
         with zipfile.ZipFile(file_path, "r") as z:
             z.extractall(temp_dir)
@@ -106,9 +108,9 @@ Example (image zip):
             transforms.Normalize((0.5,), (0.5,))
         ])
         dataset = datasets.ImageFolder(root=temp_dir, transform=tfm)
-        return DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        return dataset  # Return dataset, NOT DataLoader
 
-For tabular (.csv/.npy/.pt) or audio, implement the same interface and return a DataLoader.
+For tabular (.csv/.npy/.pt) or audio, implement the same interface and return a Dataset.
 
 ======================================================================
 MCP TOOLS YOU CAN CALL
@@ -116,7 +118,7 @@ MCP TOOLS YOU CAN CALL
 Use these tools with correctly structured arguments:
 1) submit_gan_training_job(
        dataset_file_path: str,
-       dataset_loader_code: str,        # the source code string defining create_dataloader()
+       dataset_code: str,        # the source code string defining create_dataset()
        gan_training_config: dict,       # fully specified config (JSON-serializable)
        required_pip_packages: list[str],
        job_name: str = "gan_train",
@@ -190,7 +192,7 @@ When asked to prepare a job, respond with a strict JSON object with keys:
   "dataset_loader_code": "<full python source defining create_dataloader()>",
   "submit_call": {
     "dataset_file_path": "...",
-    "dataset_loader_code": "<REUSE THE CODE STRING>",
+    "dataset_code": "<REUSE THE CODE STRING>",
     "gan_training_config": { ...REUSE THE CONFIG... },
     "required_pip_packages": ["torch", "torchvision"],
     "job_name": "gan_train",

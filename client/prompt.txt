@@ -1,0 +1,1 @@
+Use this file: /Users/dillankhurana/uva/nlp/client/train.zip as training data. Contains images in the expected format. Dimensions vary, standardize to 256x256. 10 Epcohs. For everything else, use ur best guess.
