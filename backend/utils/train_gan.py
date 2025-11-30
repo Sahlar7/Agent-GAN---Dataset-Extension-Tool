@@ -31,23 +31,23 @@ if __name__ == "__main__":
     # Create dataset (NOT dataloader - UniversalGAN.train() creates its own DataLoader)
     dataset = create_dataset(dataset_path)
     
-    print(f"🚀 Starting GAN training on {{config['modality']}} dataset from {{dataset_path}}")
+    print(f"Starting GAN training on {{config['modality']}} dataset from {{dataset_path}}")
     
     # Train the GAN (pass dataset, not dataloader)
     gan.train(dataset)
     
-    print("✅ Training complete.")
+    print("Training complete.")
     
     # Generate samples
     generated = gan.generate(5)
     
-    # Rescale from [-1, 1] → [0, 1]
+    # Rescale from [-1, 1] -> [0, 1]
     generated = (generated.clamp(-1, 1) + 1) / 2
     
     # Save generated images
     save_image(generated, "generated_samples.png", nrow=5)
     
-    print("✅ Saved generated images to generated_samples.png")
+    print("Saved generated images to generated_samples.png")
 """
 
 # SLURM script template
@@ -64,6 +64,8 @@ SLURM_SCRIPT_TEMPLATE = """
 {allocation_line}
 
 # Load prerequisite modules (required for python/3.11.4)
+module purge
+module load bzip2
 module load gcc/11.4.0
 module load openmpi/4.1.4
 module load python/{python_version}
@@ -73,14 +75,12 @@ module load cuda/{cuda_version}
 echo "Python location: $(which python)"
 python --version
 
-# Create virtual environment if it doesn't exist
-if [ ! -d "$HOME/envs/gan_env" ]; then
-    echo "Creating virtual environment..."
-    python -m venv $HOME/envs/gan_env
-fi
+# ALWAYS recreate environment - old one contains broken _bz2
+echo "Recreating clean virtual environment..."
+rm -rf $HOME/envs/gan_env
+python -m venv $HOME/envs/gan_env
 
-# Activate virtual environment
-echo "Activating virtual environment..."
+# Activate it
 source $HOME/envs/gan_env/bin/activate
 
 # Verify activation
@@ -280,8 +280,9 @@ def save_training_script(script_content, output_path):
         script_content (str): The script content
         output_path (str): Path where to save the script
     """
-    with open(output_path, "w") as f:
-        f.write(script_content)
+    unix_script = script_content.replace("\r\n", "\n").replace("\r", "\n")
+    with open(output_path, "w", newline="\n") as f:
+        f.write(unix_script)
     print(f"✅ Training script saved to: {output_path}")
 
 
@@ -293,8 +294,9 @@ def save_slurm_script(script_content, output_path):
         script_content (str): The script content
         output_path (str): Path where to save the script
     """
-    with open(output_path, "w") as f:
-        f.write(script_content)
+    unix_script = script_content.replace("\r\n", "\n").replace("\r", "\n")
+    with open(output_path, "w", newline="\n") as f:
+        f.write(unix_script)
     # Make executable
     os.chmod(output_path, 0o755)
     print(f"✅ SLURM script saved to: {output_path}")

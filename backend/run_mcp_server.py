@@ -1,5 +1,6 @@
 from typing import List, Dict
 from fastmcp import FastMCP
+import shutil
 from utils import *
 import os, zipfile, torch, tempfile, json, textwrap
 from torchvision import transforms, utils as vutils
@@ -113,7 +114,7 @@ def submit_gan_training_job(
         # --- Submit job to SLURM ---
         print("🚀 Submitting job to SLURM...")
         submission_output = submit_rivanna_job(f"{remote_dir}/train_gan_job.slurm")
-        print(submission_output)
+        print(f"submission output: {submission_output}")
         
         # Extract job ID from output (e.g., "Submitted batch job 12345")
         job_id = None
@@ -218,6 +219,153 @@ def test_simple_upload():
         # Keep the file even on error for debugging
         print(f"\n💾 Local test file kept at: {test_file.name}")
         return {"success": False, "error": str(e), "local_file": test_file.name}
+    
+
+
+# @mcp.tool
+# def explore_dataset(dataset_path: str, class_samples: int = 5):
+#     """
+#     Explore a dataset by loading and displaying sample images.
+    
+#     Args:
+#         dataset_path (str): Path to the dataset directory
+#         class_samples (int): Number of samples to read for each class
+#     """
+
+#     if not os.path.exists(dataset_path):
+#         return {"success": False, "error": f"Dataset path does not exist: {dataset_path}"}
+#     if zipfile.is_zipfile(dataset_path):
+#         try:
+#             with zipfile.ZipFile(dataset_path, 'r') as zip_ref:
+#                 extract_path = tempfile.mkdtemp()
+#                 zip_ref.extractall(extract_path)
+#                 dataset_path = extract_path
+#         except Exception as e:
+#             return {"success": False, "error": f"Failed to extract zip file: {str(e)}"}
+        
+#     dataset_structure = {}
+#     metadata = []
+#     dir_queue = []
+#     dir_queue.append(dataset_path)
+#     while len(dir_queue) > 0:
+#         cur_path = dir_queue.pop(0)
+#         cur_contents = os.listdir(cur_path)
+#         print(cur_contents[:15])
+#         dataset_structure[cur_path] = cur_contents[:15]
+#         for entry in cur_contents:
+#             samples_read = 0
+#             full_path = os.path.join(cur_path, entry)
+#             if os.path.isdir(full_path):
+#                 dir_queue.append(full_path)
+#             else:
+#                 if samples_read < class_samples:
+#                     try:
+#                         from PIL import Image
+#                         with Image.open(full_path) as img:
+#                             width, height = img.size
+#                             mode = img.mode
+#                             format = img.format
+#                         metadata.append({
+#                             "width": width,
+#                             "height": height,
+#                             "mode": mode,
+#                             "format": format,
+#                         })
+#                         samples_read += 1
+#                     except Exception as e:
+#                         metadata.append({
+#                             "path": full_path,
+#                             "error": str(e)
+#                         })
+#     return {"success": True, "structure": dataset_structure, "metadata": metadata}
+
+
+@mcp.tool
+def unzip_dataset(zip_path: str):
+    """
+    Unzip a dataset file to a temporary directory and return the path.
+    
+    Args:
+        zip_path (str): Path to the zip file
+    """
+    if not os.path.exists(zip_path):
+        return {"success": False, "error": f"Zip file does not exist: {zip_path}"}
+    if not zipfile.is_zipfile(zip_path):
+        return {"success": False, "error": f"File is not a valid zip: {zip_path}"}
+    
+    try:
+        extract_path = tempfile.mkdtemp()
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_path)
+        return {"success": True, "extracted_path": extract_path}
+    except Exception as e:
+        return {"success": False, "error": f"Failed to extract zip file: {str(e)}"}
+
+@mcp.tool
+def list_dir(file_path: str):
+    """
+    List files and directories at a given path
+    Useful for dataset exploration prior to training job submission.
+    """
+    import os
+    if not os.path.exists(file_path):
+        return {"success": False, "error": f"Path does not exist: {file_path}"}
+    
+    entries = []
+    for entry in os.listdir(file_path):
+        path = os.path.join(file_path, entry)
+        entries.append({
+            "name": entry,
+            "path": path,
+            "is_dir": os.path.isdir(path),
+        })
+    
+    return {"success": True, "entries": entries}
+
+@mcp.tool
+def get_file_extension(file_path: str):
+    """
+    Retrieve file extension for a given file path.
+    """
+    import os
+    if not os.path.exists(file_path):
+        return {"success": False, "error": f"Path does not exist: {file_path}"}
+    
+    _, ext = os.path.splitext(file_path)
+    ext = ext.lower()
+    
+
+    
+    return {"success": True, "extension": ext}
+
+@mcp.tool
+def load_image_metadata(image_path: str):
+    """
+    Load and return metadata for a given image file.
+    """
+    from PIL import Image
+    import os
+    
+    if not os.path.exists(image_path):
+        return {"success": False, "error": f"Image does not exist: {image_path}"}
+    
+    try:
+        with Image.open(image_path) as img:
+            width, height = img.size
+            mode = img.mode
+            format = img.format
+        
+        metadata = {
+            "width": width,
+            "height": height,
+            "mode": mode,
+            "format": format,
+        }
+        
+        return {"success": True, "metadata": metadata}
+    
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")

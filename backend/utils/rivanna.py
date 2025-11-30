@@ -14,6 +14,7 @@ def submit_rivanna_job(job_script_path: str):
         key_filename=os.getenv("RIVANNA_KEY_PATH"),
     )
     stdin, stdout, stderr = ssh.exec_command(f"sbatch {job_script_path}")
+    print(stderr.read().decode())
     output = stdout.read().decode().strip()
     ssh.close()
     return output
@@ -74,7 +75,7 @@ def upload_files_to_rivanna(*files):
         elif not remote_path.startswith("/home/"):
             remote_path = f"{base_remote_dir}/{remote_path}"
 
-        remote_path = os.path.normpath(remote_path)
+        remote_path = remote_path.replace("\\", "/")
         remote_dir = os.path.dirname(remote_path)
         ensure_remote_dir(remote_dir)
 
