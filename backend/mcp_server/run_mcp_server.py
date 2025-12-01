@@ -158,69 +158,67 @@ def submit_gan_training_job(
             "remote_dir": remote_dir,
         }
 
-@mcp.tool
-def poll_training_job(job_id:int, poll_frequency:int):
-    print("⏳ Polling for completion...")
-    final_state = poll_rivanna_job(job_id)
-    print(f"✅ Job finished with state: {final_state}")
+# @mcp.tool
+# def poll_training_job(job_id:int, poll_frequency:int):
+#     print("⏳ Polling for completion...")
+#     final_state = poll_rivanna_job(job_id)
+#     print(f"✅ Job finished with state: {final_state}")
 
-@mcp.tool
-def test_simple_upload():
-    """Minimal test case for Rivanna upload"""
-    import tempfile, os
+# @mcp.tool
+# def test_simple_upload():
+#     """Minimal test case for Rivanna upload"""
+#     import tempfile, os
     
-    # Create a tiny test file
-    test_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt')
-    test_file.write("Hello Rivanna!")
-    test_file.close()
+#     # Create a tiny test file
+#     test_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt')
+#     test_file.write("Hello Rivanna!")
+#     test_file.close()
     
-    print(f"📝 Created test file: {test_file.name}")
-    print(f"   Size: {os.path.getsize(test_file.name)} bytes")
+#     print(f"📝 Created test file: {test_file.name}")
+#     print(f"   Size: {os.path.getsize(test_file.name)} bytes")
     
-    try:
-        result = upload_files_to_rivanna(
-            {"remote_path": "~/scratch/test_upload.txt", "local_path": test_file.name}
-        )
-        print(f"✅ Upload returned: {result}")
+#     try:
+#         result = upload_files_to_rivanna(
+#             {"remote_path": "~/scratch/test_upload.txt", "local_path": test_file.name}
+#         )
+#         print(f"✅ Upload returned: {result}")
         
-        # Now verify via SSH
-        user = os.getenv("RIVANNA_USER") or "ntq4hf"
-        key_path = os.path.expanduser(os.getenv("RIVANNA_KEY_PATH") or "rivanna_info/rivanna_keys")
+#         # Now verify via SSH
+#         user = os.getenv("RIVANNA_USER") or "ntq4hf"
+#         key_path = os.path.expanduser(os.getenv("RIVANNA_KEY_PATH") or "rivanna_info/rivanna_keys")
         
-        import paramiko
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(hostname="login.hpc.virginia.edu", username=user, key_filename=key_path)
+#         import paramiko
+#         ssh = paramiko.SSHClient()
+#         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+#         ssh.connect(hostname="login.hpc.virginia.edu", username=user, key_filename=key_path)
         
-        # Check if file exists
-        stdin, stdout, stderr = ssh.exec_command(f"ls -lh /home/{user}/scratch/test_upload.txt")
-        output = stdout.read().decode()
-        error = stderr.read().decode()
+#         # Check if file exists
+#         stdin, stdout, stderr = ssh.exec_command(f"ls -lh /home/{user}/scratch/test_upload.txt")
+#         output = stdout.read().decode()
+#         error = stderr.read().decode()
         
-        print("\n📂 Remote file check:")
-        print(output if output else error)
+#         print("\n📂 Remote file check:")
+#         print(output if output else error)
         
-        # Try to read it back
-        stdin, stdout, stderr = ssh.exec_command(f"cat /home/{user}/scratch/test_upload.txt")
-        content = stdout.read().decode()
-        print(f"\n📄 Remote file content: '{content}'")
+#         # Try to read it back
+#         stdin, stdout, stderr = ssh.exec_command(f"cat /home/{user}/scratch/test_upload.txt")
+#         content = stdout.read().decode()
+#         print(f"\n📄 Remote file content: '{content}'")
         
-        ssh.close()
+#         ssh.close()
         
-        print(f"\n💾 Local test file kept at: {test_file.name}")
-        print(f"🌐 Remote file at: /home/{user}/scratch/test_upload.txt")
+#         print(f"\n💾 Local test file kept at: {test_file.name}")
+#         print(f"🌐 Remote file at: /home/{user}/scratch/test_upload.txt")
         
-        return {"success": True, "remote_content": content, "local_file": test_file.name}
+#         return {"success": True, "remote_content": content, "local_file": test_file.name}
         
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
-        # Keep the file even on error for debugging
-        print(f"\n💾 Local test file kept at: {test_file.name}")
-        return {"success": False, "error": str(e), "local_file": test_file.name}
-    
-
+#     except Exception as e:
+#         print(f"❌ Error: {e}")
+#         import traceback
+#         traceback.print_exc()
+#         # Keep the file even on error for debugging
+#         print(f"\n💾 Local test file kept at: {test_file.name}")
+#         return {"success": False, "error": str(e), "local_file": test_file.name}
 
 # @mcp.tool
 # def explore_dataset(dataset_path: str, class_samples: int = 5):

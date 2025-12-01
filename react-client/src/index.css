@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.title-font {
+    font-family: 'serif-italic', serif;
+    font-style: italic;
+}
+
+/* Subtle dot grid pattern overlay (opacity: 0.3, spacing: 30px) */
+.dot-grid-bg {
+    background-color: #ffffff;
+    background-image: radial-gradient(rgba(243, 244, 246, 0.3) 0.5px, transparent 0.5px);
+    background-size: 30px 30px;
+}
