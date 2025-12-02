@@ -1,5 +1,6 @@
 # backend/api/routes/jobs.py
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
+from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Optional, Literal, List
 import uuid
@@ -19,7 +20,6 @@ class JobResponse(BaseModel):
     status: str
     messages: List[Message]
     slurm_job_id: Optional[str] = None
-    result_url: Optional[str] = None
 
 class UserResponseRequest(BaseModel):
     message: str
@@ -63,7 +63,6 @@ async def initalize_agent(
             status=job['status'],
             messages=job['messages'],
             slurm_job_id=job.get('slurm_job_id'),
-            result_url=job.get('result_url')
         )
         
     except Exception as e:
@@ -138,20 +137,47 @@ async def get_job_status(job_id: str):
     state = job_service.poll_rivanna_job(job['slurm_job_id'])
 
     #Change to real state
-    job_service.update_job(job_id, status=state)
+    if state:
+        job_service.update_job(job_id, status=state)
     
     response = JobResponse(
         job_id=job['job_id'],
         status=job['status'],
         messages=job['messages'],
         slurm_job_id=job.get('slurm_job_id'),
-        result_url=job.get('result_url')
     )
 
     if any(s in job_service.get_job(job_id)['status'] for s in ("completed", "failed", "cancelled")):
         job_service.delete_job(job_id)
 
     return response
+
+
+@router.get("/{job_id}/result")
+async def get_job_result(job_id: str):
+    """Get job result URL if completed"""
+    job = job_service.get_job(job_id)
+    
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    if job['status'] != 'completed':
+        raise HTTPException(status_code=400, detail="Job not completed or result not available")
+    
+    result_file = job_service.get_rivanna_job_results()
+
+    if result_file is None:
+        raise HTTPException(status_code=404, detail="Result file not found")
+    
+    # Return binary file directly with proper headers
+    return Response(
+        content=result_file,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename=gan_output_{job_id}.zip"
+        }
+    )
+    
 
 @router.delete("/{job_id}")
 async def delete_job(job_id: str):

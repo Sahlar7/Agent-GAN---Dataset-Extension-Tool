@@ -16,13 +16,14 @@ import os
 """
 
 # Main training loop code template
-# Main training loop code template
 TRAINING_CODE_TEMPLATE = """
 if __name__ == "__main__":
+    import zipfile
+    from datetime import datetime
+    
     # Load configuration
     gan_training_config = {config_json}
     dataset_path = "{dataset_path}"
-    
     config = gan_training_config
     
     # Initialize GAN
@@ -39,15 +40,128 @@ if __name__ == "__main__":
     print("Training complete.")
     
     # Generate samples
+    print("Generating samples...")
     generated = gan.generate(5)
     
     # Rescale from [-1, 1] -> [0, 1]
     generated = (generated.clamp(-1, 1) + 1) / 2
     
-    # Save generated images
-    save_image(generated, "generated_samples.png", nrow=5)
+    # Save generated samples
+    samples_filename = f"generated_samples.png"
+    save_image(generated, samples_filename, nrow=5)
+    print(f"Generated samples saved to {{samples_filename}}")
     
-    print("Saved generated images to generated_samples.png")
+    # Save models
+    print("Saving models...")
+    generator_model = f"generator.pth"
+    discriminator_model = f"discriminator.pth"
+    torch.save(gan.G, generator_model)
+    torch.save(gan.D, discriminator_model)
+    print(f"Generator saved to {{generator_model}}")
+    print(f"Discriminator saved to {{discriminator_model}}")
+    
+    # Save complete model architecture and config
+    print("Saving model architecture and configuration...")
+    model_info = {{
+        "timestamp": datetime.now().isoformat(),
+        "config": config,
+        "generator_class": gan.G.__class__.__name__,
+        "discriminator_class": gan.D.__class__.__name__,
+        "modality": gan.modality,
+        "latent_dim": gan.latent_dim,
+        "device": str(gan.device),
+        "generator_params": sum(p.numel() for p in gan.G.parameters()),
+        "discriminator_params": sum(p.numel() for p in gan.D.parameters()),
+    }}
+    
+    model_info_filename = f"model_info.json"
+    with open(model_info_filename, "w") as f:
+        json.dump(model_info, f, indent=4)
+    print(f"Model info saved to {{model_info_filename}}")
+    
+    # Create a comprehensive zip file
+    print("Creating comprehensive output zip file...")
+    zip_filename = f"gan_output.zip"
+    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        # Add generated samples
+        zipf.write(samples_filename, arcname=f"samples/{{samples_filename}}")
+        
+        # Add models
+        zipf.write(generator_model, arcname=f"models/{{generator_model}}")
+        zipf.write(discriminator_model, arcname=f"models/{{discriminator_model}}")
+        
+        # Add model info
+        zipf.write(model_info_filename, arcname=f"config/{{model_info_filename}}")
+        
+        # Add a README
+        readme_content = f\"\"\"GAN Training Output
+===================
+
+Modality: {{config['modality']}}
+Training Date: {{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}}
+
+Contents:
+---------
+1. samples/{{samples_filename}} - Generated sample images/audio
+2. models/{{generator_model}} - Generator PyTorch model
+3. models/{{discriminator_model}} - Discriminator PyTorch model
+4. config/{{model_info_filename}} - Full model configuration and metadata
+
+To load the models:
+-------------------
+```python
+import torch
+# Load the complete models (no need for universal_gan.py!)
+generator = torch.load('models/{{generator_model}}')
+discriminator = torch.load('models/{{discriminator_model}}')
+
+# Set to evaluation mode
+generator.eval()
+discriminator.eval()
+
+# Move to appropriate device
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+generator = generator.to(device)
+discriminator = discriminator.to(device)
+
+# Generate new samples
+with torch.no_grad():
+    # Create random latent vectors
+    if '{{config['modality']}}' == 'image':
+        z = torch.randn(10, {{gan.latent_dim}}, 1, 1, device=device)
+    elif '{{config['modality']}}' == 'audio':
+        z = torch.randn(10, {{gan.latent_dim}}, 1, device=device)
+    elif '{{config['modality']}}' == 'tabular':
+        z = torch.randn(10, {{gan.latent_dim}}, device=device)
+    
+    # Generate samples
+    generated = generator(z)
+    
+    # For images: rescale from [-1, 1] to [0, 1] and save
+    if '{{config['modality']}}' == 'image':
+        from torchvision.utils import save_image
+        generated = (generated.clamp(-1, 1) + 1) / 2
+        save_image(generated, 'new_samples.png', nrow=5)
+```
+
+Generator Parameters: {{model_info['generator_params']:,}}
+Discriminator Parameters: {{model_info['discriminator_params']:,}}
+\"\"\"
+        zipf.writestr("README.txt", readme_content)
+    
+    print(f"Complete output saved to {{zip_filename}}")
+    
+    # Clean up individual files
+    os.remove(samples_filename)
+    os.remove(generator_model)
+    os.remove(discriminator_model)
+    os.remove(model_info_filename)
+    print("Cleaned up temporary files")
+    
+    print("=" * 50)
+    print("GAN TRAINING COMPLETE!")
+    print(f"All outputs saved to: {{zip_filename}}")
+    print("=" * 50)
 """
 
 # SLURM script template
