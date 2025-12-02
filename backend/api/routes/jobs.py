@@ -138,7 +138,7 @@ async def get_job_status(job_id: str):
 
     #Change to real state
     if state:
-        job_service.update_job(job_id, status=state)
+        job_service.update_job(job_id, status=state.split(" ")[0])
     
     response = JobResponse(
         job_id=job['job_id'],
@@ -148,7 +148,8 @@ async def get_job_status(job_id: str):
     )
 
     if any(s in job_service.get_job(job_id)['status'] for s in ("completed", "failed", "cancelled")):
-        job_service.delete_job(job_id)
+        pass
+        # job_service.delete_job(job_id)
 
     return response
 
