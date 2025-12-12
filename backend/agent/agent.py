@@ -152,32 +152,47 @@ Outputs must be deterministic, explicit, and ready to run with no manual edits.
 CONFIGURATION SPECIFICATION (gan_training_config: dict/JSON)
 ======================================================================
 [REQUIRED FIELDS FOR IMAGE GANS]
+Core settings
 - modality:            ALWAYS "image"
 - img_shape:           [C, H, W] (e.g., [1, 28, 28] for MNIST, [3, 64, 64] for color)
+
+Architecture
 - latent_dim:          int (default 100)
-- base_channels:       int (default 64)
+- base_channels:       int (default 64; use 32 for small images, 64-128 for larger)
 - depth:               int (counts up/down blocks; e.g., 3 for small images, 4-5 for larger)
-- upsample_mode:       "convtranspose" | "upsample_conv" | "pixelshuffle" (default: "convtranspose")
-- kernel_size:         int (default 4)
-- stride:              int (default 2)
-- padding:             int (default 1)
-- norm_type:           "batch" | "instance" | "layer" | "none" | "spectral" (default: "batch")
+
+Generator settings
 - activation_g:        "relu" | "gelu" | "leakyrelu" (default: "relu")
-- activation_d:        "leakyrelu" | "relu" (default: "leakyrelu")
 - output_activation:   "tanh" | "sigmoid" | "none" (default: "tanh")
+
+Discriminator settings
+- activation_d:        "leakyrelu" | "relu" (default: "leakyrelu")
 - final_activation:    "sigmoid" | "none" (default: "none" for hinge/wgan)
-- spectral_norm:       bool (default: false)
-- device:              "cuda" | "cpu" (default: "cuda")
+
+Normalization
+- norm_type:           "batch" | "instance" | "layer" | "none" | "spectral" (default: "batch")
+
+Training hyperparameters
+- loss_type:           "bce" | "bce_logits" | "hinge" | "wgan_gp" (default: "hinge")
 - optimizer_type:      "adam" | "adamw" | "rmsprop" | "sgd" (default: "adam")
 - lr_g:                float (default 2e-4)
 - lr_d:                float (default 2e-4)
-- betas:               [beta1, beta2] (default [0.5, 0.999])
+- betas:               [beta1, beta2] (default [0.5, 0.999]; the default is adam betas, which are stable for hinge loss)
 - weight_decay:        float (default 0.0)
-- loss_type:           "bce" | "bce_logits" | "hinge" | "wgan_gp" (default: "hinge")
-- lambda_gp:           float (gradient penalty for WGAN-GP; default 10.0)
+
+Training schedule
 - batch_size:          int (default: 64 for small images, 32 for larger)
 - epochs:              int (default: 10-50 depending on dataset size)
+- n_critic:            int (default: 1 for BCE/BCE-logits, 5 for hinge/WGAN-GP)
 
+Regularization
+- lambda_gp:           float (gradient penalty for WGAN-GP; default 10.0)
+- grad_clip:           float (default: 1.0; 0.0 to disable)
+
+Performance
+- device:              "cuda" | "cpu" (default: "cuda")
+
+Configurations MUST be defined correctly within Python Syntax (e.g booleans must be True or False with correct case sensitivity)
 ======================================================================
 DATASET CONTRACT
 ======================================================================
@@ -280,21 +295,35 @@ CANONICAL EXAMPLE: MNIST (Grayscale Images)
 
 gan_training_config:
 {
-  "modality": "image",
-  "img_shape": [1, 28, 28],
-  "latent_dim": 100,
-  "base_channels": 64,
-  "depth": 3,
-  "norm_type": "batch",
-  "activation_g": "relu",
-  "activation_d": "leakyrelu",
-  "output_activation": "tanh",
-  "final_activation": "none",
-  "loss_type": "hinge",
-  "epochs": 10,
-  "batch_size": 64
-}
+    "modality": "image",
+    "img_shape": [1, 28, 28],
 
+    "latent_dim": 100,
+    "base_channels": 32,
+    "depth": 3,
+
+    "activation_g": "relu",
+    "activation_d": "leakyrelu",
+    "output_activation": "tanh",
+    "final_activation": "none",
+
+    "norm_type": "batch",
+
+    "loss_type": "hinge",
+    "optimizer_type": "adam",
+    "lr_g": 0.0002,
+    "lr_d": 0.00005,
+    "betas": [0.5, 0.999],
+    "weight_decay": 0.0,
+
+    "batch_size": 64,
+    "epochs": 10,
+    "n_critic": 3,
+
+    "lambda_gp": 10.0,
+    "grad_clip": 1.0,
+    "device": "cuda"
+}
 dataset_code:
 import zipfile, tempfile, os
 from torchvision import datasets, transforms

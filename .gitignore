@@ -260,3 +260,5 @@ __pycache__/
 venv/
 
 *ubyte
+
+/test_output
